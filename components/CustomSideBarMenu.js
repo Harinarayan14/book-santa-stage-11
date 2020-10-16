@@ -9,10 +9,10 @@ import db from '../config'
 
 export default class CustomSideBarMenu extends Component{
   state = {
-      userId : firebase.auth().currentUser.email,
-     image: null,
-     name: "",
-     docId : ""
+    userId : firebase.auth().currentUser.email,
+    image: null,
+    name: "",
+    docId : ""
    };
 
    selectPicture = async () => {
@@ -23,13 +23,33 @@ export default class CustomSideBarMenu extends Component{
         quality: 1,
      });
      console.log(uri);
-     if (!cancelled) this. updateProfilePicture(uri);
+     if (!cancelled){
+      this.uploadImage(uri,this.state.userId);
+     } 
    }
 
+   uploadImage=async(uri,userId)=>{
+      var response = await fetch(uri);
+      var blob = await response.blob();
+      var ref = firebase.storage().ref().child("user_profile/"+userId)
+      return ref.put(blob).then((response)=>{
+        this.fetchImage(userId);
+      })
+   }
 
-
-
-
+   fetchImage=(userId)=>{
+     var storageRef = firebase.storage().ref().child("user_profile/"+ userId);
+     storageRef.getDownloadURL().then((url)=>{
+        this.setState({
+           image:url
+        }).catch((error)=>{
+          console.log(error);
+          this.setState({
+            image:""
+          })
+        })
+     })
+   }
 
    updateProfilePicture=(uri)=>{
      db.collection('users').doc(this.state.docId).update({
@@ -53,7 +73,8 @@ export default class CustomSideBarMenu extends Component{
 
 
 componentDidMount(){
-  this.getUserProfile()
+  this.getUserProfile();
+  this.fetchImage(this.state.userId);
 
 }
 
@@ -64,7 +85,6 @@ componentDidMount(){
 
             <Avatar
                 rounded
-                icon={{name: 'user', type: 'font-awesome'}}
                 source={{
                   uri:
                     this.state.image
